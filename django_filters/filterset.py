@@ -199,15 +199,26 @@ if hasattr(models, "XMLField"):
 class BaseFilterSet(object):
     filter_overrides = {}
 
-    def __init__(self, data=None, queryset=None, prefix=None):
+    def __init__(self, data=None, queryset=None, prefix=None, defaults={}):
         self.is_bound = data is not None
-        self.data = data or {}
+
         if queryset is None:
             queryset = self._meta.model._default_manager.all()
+
         self.queryset = queryset
         self.form_prefix = prefix
-
         self.filters = deepcopy(self.base_filters)
+
+        # accept only data which is defined in filters
+        items = {}
+        for k, v in data.iteritems():
+            if (k in self.filters.keys()) or\
+              (k.find(self.form_prefix) == 0 and k.split('-')[1] in self.filters.keys()):
+                items[k] = v 
+
+        self.has_data = True if len(items) else False
+        self.data = items if self.has_data else defaults
+
         # propagate the model being used through the filters
         for filter_ in self.filters.values():
             filter_.model = self._meta.model
